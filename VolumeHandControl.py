@@ -2,6 +2,7 @@ import cv2 as cv
 import time
 import numpy as np
 import mediapipe as mp
+import math
 
 cap = cv.VideoCapture(0)
 image_width = 640
@@ -16,13 +17,16 @@ mp_drawing = mp.solutions.drawing_utils
 with mp_hands.Hands(
     static_image_mode=False,
     max_num_hands=2,
-    min_detection_confidence=0.7,
-    min_tracking_confidence=0.5) as hands:
+    min_detection_confidence=0.9,
+    min_tracking_confidence=0.9) as hands:
         while True:
             ret, frame = cap.read()
+
+            # flips image and converts it from BGR to RGB
             frame = cv.flip(frame,1)
-            
-            results = hands.process(frame)
+            frame_rgb = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+
+            results = hands.process(frame_rgb)
 
             if results.multi_hand_landmarks:
                 for hand_landmarks in results.multi_hand_landmarks:
@@ -33,10 +37,20 @@ with mp_hands.Hands(
                     x_thumb = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP].x * image_width
                     y_thumb = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP].y * image_height
 
-                    cv.circle(frame, (int(x_index), int(y_index)), 15, (255,0,255), -1)
-                    cv.circle(frame, (int(x_thumb), int(y_thumb)), 15, (255,0,255), -1)
+                    mid_x, mid_y = (x_index + x_thumb) // 2, (y_index + y_thumb) // 2
+                    length = math.hypot(x_thumb - x_index, y_thumb - y_index)
+
+                    cv.circle(frame, (int(x_index), int(y_index)), 15, (0,length,255-length), -1)
+                    cv.circle(frame, (int(x_thumb), int(y_thumb)), 15, (0,length,255-length), -1)
+                    cv.line(frame, (int(x_index), int(y_index)), (int(x_thumb), int(y_thumb)), (0,length,255-length), 3)
+                    cv.circle(frame, (int(mid_x), int(mid_y)), 15, (0,length,255-length), -1)
 
                     
+                    print(length)
+                    if length < 35:
+                        cv.circle(frame, (int(mid_x), int(mid_y)), 15, (0,0,255), -1)
+                    # below 20, turn volume to 0%
+                    # above 300, turn volume to 100%
 
             cTime = time.time()
             fps = 1/(cTime-pTime)
