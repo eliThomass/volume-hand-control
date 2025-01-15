@@ -3,6 +3,21 @@ import time
 import numpy as np
 import mediapipe as mp
 import math
+from comtypes import CLSCTX_ALL
+from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+
+# Setup for volume control
+devices = AudioUtilities.GetSpeakers()
+interface = devices.Activate(
+    IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+volume = interface.QueryInterface(IAudioEndpointVolume)
+
+
+
+
+minVol = volume.GetVolumeRange()[0]
+maxVol = volume.GetVolumeRange()[1] # -64
+
 
 cap = cv.VideoCapture(0)
 image_width = 640
@@ -45,12 +60,9 @@ with mp_hands.Hands(
                     cv.line(frame, (int(x_index), int(y_index)), (int(x_thumb), int(y_thumb)), (0,length,255-length), 3)
                     cv.circle(frame, (int(mid_x), int(mid_y)), 15, (0,length,255-length), -1)
 
-                    
-                    print(length)
-                    if length < 35:
-                        cv.circle(frame, (int(mid_x), int(mid_y)), 15, (0,0,255), -1)
-                    # below 20, turn volume to 0%
-                    # above 300, turn volume to 100%
+                    vol = np.interp(length,[35,285],[minVol, maxVol])
+                    print(int(length), vol)
+                    volume.SetMasterVolumeLevel(vol, None)
 
             cTime = time.time()
             fps = 1/(cTime-pTime)
