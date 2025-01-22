@@ -12,9 +12,13 @@ interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
 volume = interface.QueryInterface(IAudioEndpointVolume)
 minVol = volume.GetVolumeRange()[0]
 maxVol = volume.GetVolumeRange()[1] # -64
+volBar = 400
+volPercent = 0
 
 # When program ends, set volume back to original level
 return_to_og_volume = volume.GetMasterVolumeLevel()
+
+
 
 # Setup for camera capture
 cap = cv.VideoCapture(0)
@@ -75,6 +79,9 @@ with mp_hands.Hands(
 
                     # Interpolates itlength to our minVol and maxVol
                     vol = np.interp(itlength,[35,285],[minVol, maxVol])
+                    volBar = np.interp(itlength,[35,285],[400, 150])
+                    volPercent = np.interp(itlength,[35,285],[0, 100])
+
                     print(int(itlength), vol)
                     # Then set our volume level to this interpolation
                     volume.SetMasterVolumeLevel(vol, None)
@@ -85,12 +92,15 @@ with mp_hands.Hands(
                     if int(irlength) < 30 and int(itlength) > 60:
                         quit = True
                     
+            cv.rectangle(frame, (50,150), (85,400), (0,255,0), 3)
+            cv.rectangle(frame, (50, int(volBar)), (85,400), (0,255,0), cv.FILLED)
                          
             # Some calculations to display the current FPS on screen
             cTime = time.time()
             fps = 1/(cTime-pTime)
             pTime = cTime
             cv.putText(frame, f"FPS: {int(fps)}", (25,50), cv.FONT_HERSHEY_COMPLEX, 2, (255,0,0), 2, cv.LINE_AA)
+            cv.putText(frame, f"{int(volPercent)}%", (45,433), cv.FONT_HERSHEY_COMPLEX, 1, (0,255,0), 2, cv.LINE_AA)
 
             # Show our final image, update every 1ms
             cv.imshow("Tracking", frame)
